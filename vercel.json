@@ -7,7 +7,7 @@
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": "{index.html,fixtures/**,node_modules/jquery/dist/**}"
+      "includeFiles": "{chat.html,fixtures/**,node_modules/jquery/dist/**}"
     }
   }
 }
