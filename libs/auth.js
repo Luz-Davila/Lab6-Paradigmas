@@ -155,6 +155,46 @@ function exigirSesion(config) {
   };
 }
 
+// El SDK de Auth0 espera ayudantes de Express (req.get, res.cookie), pero el
+// motor de Socket.IO entrega req/res crudos y su respuesta de upgrade no
+// admite cambiarle el prototipo. Se agregan solo los ayudantes necesarios.
+function agregarSetCookie(res, valor) {
+  var previas = typeof res.getHeader === 'function' ? res.getHeader('Set-Cookie') : undefined;
+  var lista = previas ? (Array.isArray(previas) ? previas.slice() : [previas]) : [];
+  lista.push(valor);
+  res.setHeader('Set-Cookie', lista);
+}
+
+function adaptarParaEngine(middleware) {
+  var cookie = require('cookie');
+
+  return function (req, res, next) {
+    if (typeof req.get !== 'function') {
+      req.get = req.header = function (nombre) {
+        var valor = this.headers[String(nombre).toLowerCase()];
+        return Array.isArray(valor) ? valor[0] : valor;
+      };
+    }
+
+    if (typeof res.cookie !== 'function') {
+      res.cookie = function (nombre, valor, opciones) {
+        agregarSetCookie(this, cookie.serialize(nombre, valor, opciones));
+        return this;
+      };
+    }
+
+    if (typeof res.clearCookie !== 'function') {
+      res.clearCookie = function (nombre, opciones) {
+        var limpieza = Object.assign({}, opciones, { expires: new Date(0), maxAge: 0 });
+        agregarSetCookie(this, cookie.serialize(nombre, '', limpieza));
+        return this;
+      };
+    }
+
+    return middleware(req, res, next);
+  };
+}
+
 // Página de error de autenticación, sin datos sensibles.
 function paginaError(motivo) {
   var mensajes = {
@@ -208,6 +248,7 @@ module.exports = {
   validarConfiguracion: validarConfiguracion,
   identidadDe: identidadDe,
   crearMiddleware: crearMiddleware,
+  adaptarParaEngine: adaptarParaEngine,
   exigirSesion: exigirSesion,
   paginaError: paginaError,
   mensajeConIdentidad: mensajeConIdentidad,

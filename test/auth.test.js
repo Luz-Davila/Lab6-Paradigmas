@@ -97,4 +97,57 @@ describe('libs/auth', function () {
 
   });
 
+  describe('adaptarParaEngine', function () {
+
+    it('debería entregar una request con los ayudantes de Express', function (done) {
+      var http = require('http');
+      var terminado = false;
+
+      function terminar(error, servidor) {
+        if (terminado) {
+          return;
+        }
+        terminado = true;
+        if (servidor) {
+          servidor.close();
+        }
+        done(error);
+      }
+
+      // Simula el middleware de Auth0: necesita req.get y res.cookie, que la
+      // request cruda del motor de Socket.IO no tiene.
+      var adaptado = auth.adaptarParaEngine(function (req, res, next) {
+        try {
+          assert.equal(typeof req.get, 'function');
+          assert.equal(req.get('x-prueba'), 'ok');
+          assert.equal(typeof res.cookie, 'function');
+          assert.equal(typeof res.clearCookie, 'function');
+          res.statusCode = 204;
+          res.end();
+          terminar(null, servidor);
+        } catch (e) {
+          terminar(e, servidor);
+        }
+      });
+
+      var servidor = http.createServer(adaptado);
+
+      servidor.listen(0, function () {
+        var puerto = servidor.address().port;
+
+        http.get({
+          host: '127.0.0.1',
+          port: puerto,
+          path: '/socket.io/?EIO=4&transport=polling',
+          headers: { 'x-prueba': 'ok' }
+        }, function (res) {
+          res.resume();
+        }).on('error', function (e) {
+          terminar(e, servidor);
+        });
+      });
+    });
+
+  });
+
 });

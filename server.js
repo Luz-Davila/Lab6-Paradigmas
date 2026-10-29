@@ -76,7 +76,8 @@ app.use(function(err, req, res, next){
 });
 
 // El handshake de Socket.IO pasa por el mismo middleware de sesión.
-io.engine.use(middlewareAuth);
+// Se adapta a una request de Express porque el SDK lo necesita.
+io.engine.use(authLib.adaptarParaEngine(middlewareAuth));
 
 io.use(function(socket, next){
   var identidad = authLib.identidadDe(socket.request);
