@@ -495,9 +495,9 @@ describe('Seguridad del chat UNA', function () {
 
   });
 
-  describe('Cliente del chat (index.html)', function () {
+  describe('Cliente del chat (chat.html)', function () {
 
-    var html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    var html = fs.readFileSync(path.join(__dirname, '..', 'chat.html'), 'utf8');
 
     it('no debería conservar el render antiguo que inyectaba el mensaje crudo', function () {
       assert.equal(html.indexOf('mensajeDisplay'), -1);

@@ -12,7 +12,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var port = process.env.PORT || 3000;
 
-// La configuraciÃ³n se valida al arrancar: si falta una variable, el proceso
+// La configuración se valida al arrancar: si falta una variable, el proceso
 // falla con un mensaje que nombra la que falta.
 var config = authLib.validarConfiguracion();
 var middlewareAuth = authLib.crearMiddleware(config);
@@ -27,29 +27,17 @@ app.use('/vendor', express.static(path.join(__dirname, 'node_modules/jquery/dist
 // Medios de prueba locales para las pruebas end-to-end.
 app.use('/fixtures', express.static(path.join(__dirname, 'fixtures')));
 
-// root: presentar html (solo con sesiÃ³n)
-app.get('/ping', function(req, res){
-  res.send('ping-ok');
-});
-
-app.get('/inicio', authLib.exigirSesion(config), function(req, res){
-  res.send('inicio-ok');
-});
-
-app.get('/', function(req, res){
-  res.send('root-ok');
-});
-
-app.get('/__real', authLib.exigirSesion(config), function(req, res){
+// root: presentar html (solo con sesión)
+app.get('/', authLib.exigirSesion(config), function(req, res){
   res.sendFile(path.join(__dirname, 'chat.html'), function(err){
     if (err) {
-      console.error('No se pudo servir index.html:', err.message);
+      console.error('No se pudo servir chat.html:', err.message);
       res.status(500).send('No se pudo cargar el chat.');
     }
   });
 });
 
-// Identidad mÃ­nima del usuario autenticado, para que el cliente la muestre.
+// Identidad mínima del usuario autenticado, para que el cliente la muestre.
 app.get('/api/me', function(req, res){
   var identidad = authLib.identidadDe(req);
 
@@ -67,7 +55,7 @@ app.get('/api/estado', function(req, res){
   });
 });
 
-// Pantalla de error de autenticaciÃ³n: mensaje claro y reintento.
+// Pantalla de error de autenticación: mensaje claro y reintento.
 app.get('/login-error', function(req, res){
   res.status(401).send(authLib.paginaError(req.query.motivo));
 });
@@ -85,13 +73,13 @@ if (config.modoPrueba) {
   });
 }
 
-// Cualquier error de autenticaciÃ³n del SDK termina en la pantalla de error.
+// Cualquier error de autenticación del SDK termina en la pantalla de error.
 app.use(function(err, req, res, next){
   if (res.headersSent) {
     return next(err);
   }
 
-  console.error('Error de autenticaciÃ³n:', err && err.message);
+  console.error('Error de autenticación:', err && err.message);
 
   if (req.path === '/login-error') {
     return res.status(500).send(authLib.paginaError('error'));
@@ -100,7 +88,7 @@ app.use(function(err, req, res, next){
   return res.redirect('/login-error?motivo=error');
 });
 
-// El handshake de Socket.IO pasa por el mismo middleware de sesiÃ³n.
+// El handshake de Socket.IO pasa por el mismo middleware de sesión.
 // Se adapta a una request de Express porque el SDK lo necesita.
 io.engine.use(authLib.adaptarParaEngine(middlewareAuth));
 
@@ -120,7 +108,7 @@ io.on('connection', function(socket){
   // si se escucha "chat message"
   socket.on('Evento-Mensaje-Server', function(msg){
 
-    // El nombre no se toma del cliente: se impone el de la sesiÃ³n.
+    // El nombre no se toma del cliente: se impone el de la sesión.
     msg = authLib.mensajeConIdentidad(msg, socket.identidad);
     msg = validation.validateMessage(msg);
     // volvemos a emitir el mismo mensaje
@@ -143,10 +131,13 @@ if (require.main === module) {
   start();
 }
 
-module.exports = {
-  app: app,
-  http: http,
-  io: io,
-  start: start,
-  config: config
-};
+// Vercel exige que el export por defecto sea una función (o un server HTTP);
+// por eso se exporta la propia app y se le cuelgan las demás piezas, que
+// siguen disponibles con desestructuración en las pruebas.
+app.app = app;
+app.http = http;
+app.io = io;
+app.start = start;
+app.config = config;
+
+module.exports = app;
