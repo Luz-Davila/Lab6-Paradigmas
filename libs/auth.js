@@ -141,17 +141,28 @@ function crearMiddleware(config) {
   });
 }
 
-// Exige sesión. En producción usa el guardia del SDK; en pruebas redirige igual.
+// Exige sesión. En producción delega en res.oidc.login() (la misma ruta que
+// usa /login); en pruebas redirige a la pantalla de error.
 function exigirSesion(config) {
-  if (!config.modoPrueba) {
-    return cargarSdk().requiresAuth();
+  if (config.modoPrueba) {
+    return function (req, res, next) {
+      if (identidadDe(req)) {
+        return next();
+      }
+      return res.redirect('/login-error?motivo=sin_sesion');
+    };
   }
 
   return function (req, res, next) {
     if (identidadDe(req)) {
       return next();
     }
-    return res.redirect('/login-error?motivo=sin_sesion');
+
+    if (res.oidc && typeof res.oidc.login === 'function') {
+      return res.oidc.login();
+    }
+
+    return res.redirect('/login');
   };
 }
 

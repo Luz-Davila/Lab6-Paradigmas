@@ -29,7 +29,12 @@ app.use('/fixtures', express.static(path.join(__dirname, 'fixtures')));
 
 // root: presentar html (solo con sesión)
 app.get('/', authLib.exigirSesion(config), function(req, res){
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'), function(err){
+    if (err) {
+      console.error('No se pudo servir index.html:', err.message);
+      res.status(500).send('No se pudo cargar el chat.');
+    }
+  });
 });
 
 // Identidad mínima del usuario autenticado, para que el cliente la muestre.
