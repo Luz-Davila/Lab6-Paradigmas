@@ -17,6 +17,9 @@
     "security": "snyk test --severity-threshold=high",
     "security:dev": "snyk test --dev --severity-threshold=high"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "jest": {
     "testEnvironment": "node",
     "testMatch": [

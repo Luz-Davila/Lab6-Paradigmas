@@ -110,6 +110,17 @@ describe('Integración backend + una-lib', () => {
 
   });
 
+  describe('Ruta HTTP GET /api/estado', () => {
+
+    it('debería informar que el chat en tiempo real está disponible fuera de Vercel', async () => {
+      const respuesta = await request(app).get('/api/estado');
+
+      expect(respuesta.status).toBe(200);
+      expect(respuesta.body.realtime).toBe(true);
+    });
+
+  });
+
   describe('Handshake de Socket.IO', () => {
 
     it('debería rechazar la conexión sin sesión', async () => {

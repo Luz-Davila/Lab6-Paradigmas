@@ -83,7 +83,7 @@ Las pruebas no usan el tenant real: con `NODE_ENV=test` y `AUTH0_TEST_MODE=1` se
 
 ## Limitaciones conocidas
 
-- **Socket.IO en Vercel:** las funciones serverless no mantienen conexiones WebSocket, así que el chat en tiempo real no funciona igual que en local. El inicio y cierre de sesión, la identidad y la protección de rutas sí se validan en el despliegue. Queda como deuda técnica migrar el transporte (polling, SSE o un backend aparte) si se necesita el chat completo en producción.
+- **Socket.IO en Vercel:** las funciones serverless no mantienen conexiones WebSocket, así que el chat en tiempo real no funciona igual que en local. La app lo detecta (`/api/estado` responde `realtime: false` cuando corre en Vercel) y muestra un aviso en lugar de intentar conectar. El inicio y cierre de sesión, la identidad y la protección de rutas sí funcionan y se validan en el despliegue. Queda como deuda técnica migrar el transporte (polling, SSE o un backend aparte) si se necesita el chat completo en producción.
 - La cookie de sesión usa `SameSite=Lax`; si se configura un dominio propio distinto al de Auth0, hay que ajustarla a `None; Secure`.
 
 ## Estructura

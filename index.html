@@ -185,14 +185,8 @@
             });
     }
 
-      $(function () {
-        cargarIdentidad();
-
+      function iniciarChat() {
         var socket = io();
-
-        $('#salir').on('click', function () {
-            window.location.href = '/logout';
-        });
 
         socket.on('connect_error', function (error) {
             var mensaje = error && error.message === 'unauthorized'
@@ -245,6 +239,31 @@
             $('#messages').append($li);
             window.scrollTo(0, document.body.scrollHeight);
         });
+      }
+
+      $(function () {
+        cargarIdentidad();
+
+        $('#salir').on('click', function () {
+            window.location.href = '/logout';
+        });
+
+        // El chat en tiempo real no existe en Vercel (sin WebSockets): se avisa
+        // en vez de mostrar un error de conexión.
+        fetch('/api/estado', { credentials: 'same-origin' })
+            .then(function (respuesta) {
+                return respuesta.ok ? respuesta.json() : { realtime: true };
+            })
+            .then(function (estado) {
+                if (estado.realtime === false) {
+                    mostrarAviso('El chat en tiempo real no está disponible en este despliegue. Podés iniciar y cerrar sesión con normalidad.');
+                    return;
+                }
+                iniciarChat();
+            })
+            .catch(function () {
+                iniciarChat();
+            });
 
       });
     </script>

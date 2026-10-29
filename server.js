@@ -18,6 +18,7 @@ var config = authLib.validarConfiguracion();
 var middlewareAuth = authLib.crearMiddleware(config);
 
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(middlewareAuth);
 
 // jQuery local: evita depender de un CDN y permite escanearlo con Snyk.
@@ -40,6 +41,13 @@ app.get('/api/me', function(req, res){
   }
 
   return res.json(identidad);
+});
+
+// Estado de la plataforma: en Vercel no hay WebSockets persistentes.
+app.get('/api/estado', function(req, res){
+  res.json({
+    realtime: process.env.VERCEL !== '1'
+  });
 });
 
 // Pantalla de error de autenticación: mensaje claro y reintento.
