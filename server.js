@@ -28,7 +28,19 @@ app.use('/vendor', express.static(path.join(__dirname, 'node_modules/jquery/dist
 app.use('/fixtures', express.static(path.join(__dirname, 'fixtures')));
 
 // root: presentar html (solo con sesión)
-app.get('/', authLib.exigirSesion(config), function(req, res){
+app.get('/ping', function(req, res){
+  res.send('ping-ok');
+});
+
+app.get('/inicio', authLib.exigirSesion(config), function(req, res){
+  res.send('inicio-ok');
+});
+
+app.get('/', function(req, res){
+  res.send('root-ok');
+});
+
+app.get('/__real', authLib.exigirSesion(config), function(req, res){
   res.sendFile(path.join(__dirname, 'index.html'), function(err){
     if (err) {
       console.error('No se pudo servir index.html:', err.message);
