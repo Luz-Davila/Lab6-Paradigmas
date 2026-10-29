@@ -158,10 +158,8 @@ function exigirSesion(config) {
       return next();
     }
 
-    if (res.oidc && typeof res.oidc.login === 'function') {
-      return res.oidc.login();
-    }
-
+    // Se usa la ruta /login, que ya está probada en este entorno, en lugar de
+    // construir el redirect desde acá.
     return res.redirect('/login');
   };
 }
