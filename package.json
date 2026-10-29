@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "dotenv": "^18.0.9",
     "express": "*",
+    "express-openid-connect": "^3.4.0",
     "jquery": "^3.7.1",
     "socket.io": "*"
   },

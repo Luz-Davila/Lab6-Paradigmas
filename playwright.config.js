@@ -33,7 +33,9 @@ module.exports = defineConfig({
     reuseExistingServer: false,
     timeout: 120000,
     env: {
-      PORT: '3100'
+      PORT: '3100',
+      NODE_ENV: 'test',
+      AUTH0_TEST_MODE: '1'
     }
   }
 });

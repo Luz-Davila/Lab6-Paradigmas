@@ -1,20 +1,36 @@
 <!doctype html>
-<html>
+<html lang="es">
   <head>
+    <meta charset="utf-8">
     <title>Chat Socket.IO UNA</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font: 13px Helvetica, Arial; }
+      .barra {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 12px; background: #111; color: #fff;
+        position: sticky; top: 0; z-index: 1;
+      }
+      .barra img { width: 28px; height: 28px; border-radius: 50%; background: #555; }
+      .barra .nombre { font-weight: bold; flex: 1; }
+      .barra button {
+        background: transparent; color: #fff; border: 1px solid #666;
+        border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit;
+      }
+      .barra button:hover { background: #333; }
+      .aviso {
+        display: none; padding: 10px 12px; background: #fff3cd; color: #664d03;
+        border-bottom: 1px solid #ffe69c;
+      }
+      .aviso.visible { display: block; }
+      .aviso a { color: #664d03; font-weight: bold; }
       form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px;}
+      form input { border: 0; padding: 10px; width: 89%; }
       form button { width: 10%; background: rgb(130, 224, 255);  border: none; padding: 10px; }
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages li { padding: 5px 10px; overflow-wrap: anywhere; }
       #messages li:nth-child(odd) { background: #eee; }
       #messages { margin-bottom: 40px }
-      #nombre, #m { display: inline-block;}
-      #m {width: 69%; margin-right: 4px;}
-      #nombre {width: 20%}
       .media-chat {
         display: block;
         max-width: min(100%, 400px);
@@ -27,9 +43,18 @@
     </style>
   </head>
   <body>
+    <header class="barra">
+      <img id="avatar" alt="" hidden>
+      <span class="nombre" id="usuario">Cargando…</span>
+      <button type="button" id="salir">Cerrar sesión</button>
+    </header>
+
+    <p class="aviso" id="aviso">
+      Tu sesión terminó. <a href="/login">Volver a iniciar sesión</a>
+    </p>
+
     <ul id="messages"></ul>
     <form action="">
-      <input id="nombre" autocomplete="off" maxlength="50" placeholder="Username"/>
       <input id="m" autocomplete="off" maxlength="2000" placeholder="Mensaje o URL de imagen/video" /><button>Send</button>
     </form>
     <script src="/socket.io/socket.io.js"></script>
@@ -124,13 +149,61 @@
         return $('<span>').html(typeof msgJson.mensaje === 'string' ? msgJson.mensaje : '');
     }
 
+    function mostrarAviso(texto) {
+        var $aviso = $('#aviso');
+        if (texto) {
+            $aviso.text(texto + ' ').append($('<a>').attr('href', '/login').text('Volver a iniciar sesión'));
+        }
+        $aviso.addClass('visible');
+    }
+
+    // La identidad la decide el servidor: acá solo se muestra.
+    function cargarIdentidad() {
+        return fetch('/api/me', { credentials: 'same-origin' })
+            .then(function (respuesta) {
+                if (respuesta.status === 401) {
+                    window.location.href = '/login';
+                    return null;
+                }
+                if (!respuesta.ok) {
+                    throw new Error('No se pudo obtener la identidad');
+                }
+                return respuesta.json();
+            })
+            .then(function (identidad) {
+                if (!identidad) {
+                    return;
+                }
+                $('#usuario').text(identidad.nombre || 'Usuario');
+                if (identidad.picture) {
+                    $('#avatar').attr('src', identidad.picture).prop('hidden', false);
+                }
+            })
+            .catch(function () {
+                $('#usuario').text('Usuario');
+                mostrarAviso('No pudimos cargar tu perfil.');
+            });
+    }
+
       $(function () {
+        cargarIdentidad();
+
         var socket = io();
+
+        $('#salir').on('click', function () {
+            window.location.href = '/logout';
+        });
+
+        socket.on('connect_error', function (error) {
+            var mensaje = error && error.message === 'unauthorized'
+                ? 'Tu sesión terminó.'
+                : 'Se perdió la conexión con el chat.';
+            mostrarAviso(mensaje);
+        });
 
         // emite evento al servidor
 
         $('form').submit(function(){
-            var nombreTxt = $('#nombre').val() || "Anomimo";
             var mensajeTxt = $('#m').val();
 
             // No se envian mensajes vacios ni solo espacios.
@@ -143,7 +216,8 @@
                 colorHexTxt = getRandomColor();
             }
 
-            var jsonMsg = { nombre: nombreTxt, mensaje: mensajeTxt, color: colorHexTxt };
+            // El nombre no se envía: el servidor usa el de la sesión.
+            var jsonMsg = { mensaje: mensajeTxt, color: colorHexTxt };
             socket.emit('Evento-Mensaje-Server', JSON.stringify(jsonMsg));
             $('#m').val('');
             return false;
@@ -161,7 +235,7 @@
 
             var $nombre = $('<b>')
                 .css('color', colorSeguro(msgJson.color))
-                .html(msgJson.nombre || 'Anónimo');
+                .text(msgJson.nombre || 'Anónimo');
 
             var $li = $('<li>')
                 .append($nombre)

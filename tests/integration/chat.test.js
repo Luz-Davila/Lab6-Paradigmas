@@ -1,3 +1,7 @@
+// Se activa el doble de autenticación antes de cargar el servidor.
+process.env.NODE_ENV = 'test';
+process.env.AUTH0_TEST_MODE = '1';
+
 const request = require('supertest');
 const { io: ioClient } = require('socket.io-client');
 const { app, http, io } = require('../../server');
@@ -10,13 +14,20 @@ let puerto;
 let cliente;
 
 // Conecta un cliente real de Socket.IO al servidor de prueba.
-function conectar() {
+// Sin usuario, el handshake debe ser rechazado.
+function conectar(usuario) {
   return new Promise((resolve, reject) => {
-    const socket = ioClient(`http://127.0.0.1:${puerto}`, {
+    const opciones = {
       transports: ['websocket'],
       forceNew: true,
       reconnection: false
-    });
+    };
+
+    if (usuario) {
+      opciones.extraHeaders = { Cookie: 'test_user=' + encodeURIComponent(usuario) };
+    }
+
+    const socket = ioClient(`http://127.0.0.1:${puerto}`, opciones);
 
     socket.once('connect', () => resolve(socket));
     socket.once('connect_error', reject);
@@ -40,7 +51,7 @@ beforeAll((done) => {
 });
 
 beforeEach(async () => {
-  cliente = await conectar();
+  cliente = await conectar('Luz');
 });
 
 afterEach(() => {
@@ -64,12 +75,49 @@ describe('Integración backend + una-lib', () => {
 
   describe('Ruta HTTP GET /', () => {
 
-    it('debería servir el chat en HTML', async () => {
-      const respuesta = await request(app).get('/');
+    it('debería servir el chat en HTML cuando hay sesión', async () => {
+      const respuesta = await request(app).get('/').set('Cookie', 'test_user=Luz');
 
       expect(respuesta.status).toBe(200);
       expect(respuesta.headers['content-type']).toContain('text/html');
       expect(respuesta.text).toContain('Chat Socket.IO UNA');
+    });
+
+    it('debería redirigir al login cuando no hay sesión', async () => {
+      const respuesta = await request(app).get('/');
+
+      expect(respuesta.status).toBe(302);
+      expect(respuesta.headers.location).toContain('/login-error');
+    });
+
+  });
+
+  describe('Ruta HTTP GET /api/me', () => {
+
+    it('debería devolver la identidad de la sesión', async () => {
+      const respuesta = await request(app).get('/api/me').set('Cookie', 'test_user=Luz');
+
+      expect(respuesta.status).toBe(200);
+      expect(respuesta.body).toEqual({ nombre: 'Luz', picture: '' });
+    });
+
+    it('debería responder 401 sin sesión', async () => {
+      const respuesta = await request(app).get('/api/me');
+
+      expect(respuesta.status).toBe(401);
+      expect(respuesta.body.error).toBe('no_autenticado');
+    });
+
+  });
+
+  describe('Handshake de Socket.IO', () => {
+
+    it('debería rechazar la conexión sin sesión', async () => {
+      await expect(conectar(null)).rejects.toThrow();
+    });
+
+    it('debería aceptar la conexión con sesión', async () => {
+      expect(cliente.connected).toBe(true);
     });
 
   });
@@ -145,17 +193,17 @@ describe('Integración backend + una-lib', () => {
 
       expect(salida.tipo).toBe('texto');
       expect(salida.mensaje).toBe('&lt;img src=x onerror=alert(1)&gt;');
+      expect(salida.nombre).toBe('Luz');
     });
 
-    it('debería sanear el nombre enviado por el cliente', async () => {
+    it('debería ignorar el nombre enviado por el cliente y usar el de la sesión', async () => {
       const salida = await enviar(cliente, JSON.stringify({
-        nombre: '</b><script>alert(1)</script>',
+        nombre: 'Intruso',
         mensaje: 'hola',
         color: '#FF0000'
       }));
 
-      expect(salida.nombre).not.toContain('<');
-      expect(salida.nombre).not.toContain('>');
+      expect(salida.nombre).toBe('Luz');
     });
 
     it('debería rechazar una URL con credenciales incrustadas', async () => {
@@ -169,21 +217,17 @@ describe('Integración backend + una-lib', () => {
       expect(salida.url).toBe('');
     });
 
-    it('debería invocar realmente validateMessage de una-lib', async () => {
+    it('debería invocar validateMessage con el nombre de la sesión', async () => {
       const espia = jest.spyOn(validation, 'validateMessage');
 
       await enviar(cliente, JSON.stringify({
-        nombre: 'Luz',
+        nombre: 'Intruso',
         mensaje: 'hola',
         color: '#FF0000'
       }));
 
       expect(espia).toHaveBeenCalledTimes(1);
-      expect(espia).toHaveBeenCalledWith(JSON.stringify({
-        nombre: 'Luz',
-        mensaje: 'hola',
-        color: '#FF0000'
-      }));
+      expect(espia.mock.calls[0][0]).toContain('"nombre":"Luz"');
     });
 
   });
