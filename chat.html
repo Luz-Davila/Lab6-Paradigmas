@@ -149,10 +149,11 @@
         return $('<span>').html(typeof msgJson.mensaje === 'string' ? msgJson.mensaje : '');
     }
 
-    function mostrarAviso(texto) {
+    function mostrarAviso(texto, conEnlace) {
         var $aviso = $('#aviso');
-        if (texto) {
-            $aviso.text(texto + ' ').append($('<a>').attr('href', '/login').text('Volver a iniciar sesión'));
+        $aviso.text(texto ? texto + ' ' : '');
+        if (conEnlace) {
+            $aviso.append($('<a>').attr('href', '/login').text('Volver a iniciar sesión'));
         }
         $aviso.addClass('visible');
     }
@@ -181,8 +182,7 @@
             })
             .catch(function () {
                 $('#usuario').text('Usuario');
-                mostrarAviso('No pudimos cargar tu perfil.');
-            });
+                mostrarAviso('No pudimos cargar tu perfil.');            });
     }
 
       function iniciarChat() {
@@ -192,7 +192,7 @@
             var mensaje = error && error.message === 'unauthorized'
                 ? 'Tu sesión terminó.'
                 : 'Se perdió la conexión con el chat.';
-            mostrarAviso(mensaje);
+            mostrarAviso(mensaje, true);
         });
 
         // emite evento al servidor
