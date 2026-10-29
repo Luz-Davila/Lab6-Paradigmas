@@ -1,0 +1,38 @@
+schema: spec-driven
+githubCopilot:
+  cloudAgent: false
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+context: |
+  UNA Chat: chat en tiempo real del curso Paradigmas de Programación (UNA, Campus Nicoya).
+  Stack: Node.js 22, Express, Socket.IO y un cliente único `index.html` con jQuery (sin build step ni framework de frontend).
+  Validación y saneamiento de mensajes en `libs/unalib.js`; pruebas en tres capas: Mocha (unitaria), Jest + Supertest (integración) y Playwright (e2e).
+  Comandos: `npm start` (puerto 3000), `npm test`, `npm run test:integration`, `npm run test:e2e`, `npm run test:all`.
+  Idioma: comentarios, textos de interfaz y documentación en español.
+  Seguridad: nada del cliente llega al DOM sin validar o escapar; secretos solo en variables de entorno (`.env` local, panel de Vercel), nunca en el repo ni en el navegador.
+  Contexto de entrega: Laboratorio 8, US-01 — inicio de sesión social con Auth0 (proveedor Google) en local y en Vercel.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+rules:
+  proposal:
+    - Incluir siempre una sección "No objetivos".
+    - Mantener la propuesta breve y en español.
+  specs:
+    - Cubrir los 9 criterios de aceptación de la US-01, uno por requisito como mínimo.
+    - Escribir los escenarios en formato Dado / Cuando / Entonces.
+  tasks:
+    - Separar configuración de Auth0, implementación, pruebas y despliegue.
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
